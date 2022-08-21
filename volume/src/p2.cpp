@@ -66,8 +66,7 @@ class Database {
     file.read((char*)&tmp, recordSize);
     if (!file.good()) throw std::runtime_error("error reading meta record\n");
     int last = tmp.lastRemoved;
-    std::cout << last << std::endl;
-    if (last >= 0) {
+    if (last > 0) {
       // override
       file.seekg(last * recordSize);
       file.read((char*)&tmp, recordSize);
@@ -82,7 +81,7 @@ class Database {
         throw std::runtime_error("error writing replacing meta record\n");
     } else {
       // append
-      file.seekg(std::ios::end);
+      file.seekg(0, std::ios::end);
       file.write((char*)&record, recordSize);
       if (!file.good())
         throw std::runtime_error("error appending new record\n");
@@ -137,7 +136,7 @@ std::ostream& operator<<(std::ostream& os, Alumno alum) {
 
 int p2Test() {
   Database db("/data/testp2");
-  Alumno ta = {"codi", "nombre", "apellido", "carrera", 1, 23};
+  Alumno ta = {"2222", "nombre", "apellido", "carrera", 1, 23};
   std::cout << ta;
   int errors = 0;
   // add
