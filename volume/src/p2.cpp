@@ -1,6 +1,8 @@
 #include <cstring>
 #include <fstream>
+#include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -29,22 +31,27 @@ class Database {
 
  public:
   Database(std::string filename_) : filename(filename_) {
-    std::fstream file(filename, mode);
+    std::fstream file(filename, std::fstream::binary | std::fstream::out);
+    if (!file.good()) throw std::runtime_error("error oppening the db\n");
     Record dummiRecord = {{}, -1, true};
     file.write((char*)&dummiRecord, recordSize);
+    if (!file.good()) throw std::runtime_error("error writing dummi record\n");
+    file.flush();
     file.close();
   }
   ~Database() {}
+
   std::vector<Alumno> load() {
-    std::fstream file(filename, mode);
-    std::stringstream ss;
-    ss << file.rdbuf();
-    std::string content = ss.str();
+    std::ifstream file(filename, std::fstream::binary);
+    if (!file.good()) throw std::runtime_error("error oppening the db\n");
+    std::string content(std::istreambuf_iterator<char>(file), {});
+    if (!file.good()) throw std::runtime_error("error reading db content\n");
     file.close();
     std::size_t count = content.size() / recordSize;
+    std::cout << count << "\n";
     std::vector<Alumno> records(count);
     Record temp = {};
-    for (std::size_t i = 1; i < count; i++) {
+    for (std::size_t i = 0; i < count; i++) {
       std::memcpy(&temp, &content[i * recordSize], recordSize);
       records[i] = temp.data;
     }
@@ -52,25 +59,35 @@ class Database {
   }
   void add(Alumno alum) {
     std::fstream file(filename, mode);
-    // check for removed record
+    if (!file.good()) throw std::runtime_error("error oppening the db\n");
     Record tmp = {};
     Record record = {alum, -1, false};
-
+    // check for removed record
     file.read((char*)&tmp, recordSize);
-    std::size_t last = tmp.lastRemoved;
-    if (last) {
+    if (!file.good()) throw std::runtime_error("error reading meta record\n");
+    int last = tmp.lastRemoved;
+    std::cout << last << std::endl;
+    if (last >= 0) {
       // override
       file.seekg(last * recordSize);
       file.read((char*)&tmp, recordSize);
+      if (!file.good()) throw std::runtime_error("error reading last record\n");
       file.seekg(last * recordSize);
       file.write((char*)&record, recordSize);
-      file.seekg(0);
+      if (!file.good())
+        throw std::runtime_error("error writing replacing new record\n");
+      file.seekg(std::ios::beg);
       file.write((char*)&tmp, recordSize);
+      if (!file.good())
+        throw std::runtime_error("error writing replacing meta record\n");
     } else {
       // append
       file.seekg(std::ios::end);
       file.write((char*)&record, recordSize);
+      if (!file.good())
+        throw std::runtime_error("error appending new record\n");
     }
+    file.flush();
     file.close();
   }
   Alumno readRecord(int pos) {
@@ -80,6 +97,7 @@ class Database {
     // check if erased
     while (file.good()) {
       file.read((char*)&record, recordSize);
+      if (!file.good()) throw std::runtime_error("error reading pos record\n");
       if (record.lastRemoved >= 0) {
         return record.data;
       }
@@ -106,9 +124,21 @@ class Database {
   }
 };
 
+std::ostream& operator<<(std::ostream& os, Alumno alum) {
+  os << "{ ";
+  os << alum.codigo << ", ";
+  os << alum.nombre << ", ";
+  os << alum.apellidos << ", ";
+  os << alum.carrera << ", ";
+  os << alum.ciclo << ", ";
+  os << alum.mensualidad << "}\n";
+  return os;
+}
+
 int p2Test() {
-  Database db("testp2");
+  Database db("/data/testp2");
   Alumno ta = {"codi", "nombre", "apellido", "carrera", 1, 23};
+  std::cout << ta;
   int errors = 0;
   // add
   db.add(ta);
@@ -118,13 +148,7 @@ int p2Test() {
   db.add(ta);
   db.add(ta);
   // load
-  auto students = db.load();
-  if (students.size() != 6) errors++;
-  // remove
-  if (db.remove(8)) errors++;
-  if (!db.remove(3)) errors++;
-  // read
-  if (db.readRecord(9).mensualidad == ta.mensualidad) errors++;
-  if (db.readRecord(3).mensualidad != ta.mensualidad) errors++;
+  auto vec = db.load();
+  for (int i = 0; i < vec.size(); i++) std::cout << vec[i];
   return errors;
 }
