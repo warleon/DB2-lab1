@@ -24,15 +24,15 @@ typedef struct {
 class Database {
   static const size_t recordSize = sizeof(Record);
   static const size_t dataSize = sizeof(Alumno);
-  static const std::fstream::openmode mode =
-      std::fstream::binary | std::fstream::in | std::fstream::out;
+  static const std::fstream::openmode mode = std::fstream::binary;
 
   std::string filename;
 
  public:
   Database(std::string filename_) : filename(filename_) {
-    std::fstream file(filename, std::fstream::binary | std::fstream::out);
-    if (!file.good()) throw std::runtime_error("error oppening the db\n");
+    std::ofstream file(filename, mode);
+    if (!file.good())
+      throw std::runtime_error("error oppening the db at constructor\n");
     Record dummiRecord = {{}, -1, true};
     file.write((char*)&dummiRecord, recordSize);
     if (!file.good()) throw std::runtime_error("error writing dummi record\n");
@@ -42,8 +42,9 @@ class Database {
   ~Database() {}
 
   std::vector<Alumno> load() {
-    std::ifstream file(filename, std::fstream::binary);
-    if (!file.good()) throw std::runtime_error("error oppening the db\n");
+    std::ifstream file(filename, mode);
+    if (!file.good())
+      throw std::runtime_error("error oppening the db at load\n");
     std::string content(std::istreambuf_iterator<char>(file), {});
     if (!file.good()) throw std::runtime_error("error reading db content\n");
     file.close();
@@ -58,8 +59,9 @@ class Database {
     return records;
   }
   void add(Alumno alum) {
-    std::fstream file(filename, mode);
-    if (!file.good()) throw std::runtime_error("error oppening the db\n");
+    std::fstream file(filename, mode | std::fstream::in | std::fstream::out);
+    if (!file.good())
+      throw std::runtime_error("error oppening the db at add\n");
     Record tmp = {};
     Record record = {alum, -1, false};
     // check for removed record
@@ -71,17 +73,17 @@ class Database {
       file.seekg(last * recordSize);
       file.read((char*)&tmp, recordSize);
       if (!file.good()) throw std::runtime_error("error reading last record\n");
-      file.seekg(last * recordSize);
+      file.seekp(last * recordSize);
       file.write((char*)&record, recordSize);
       if (!file.good())
         throw std::runtime_error("error writing replacing new record\n");
-      file.seekg(std::ios::beg);
+      file.seekp(0, std::ios::beg);
       file.write((char*)&tmp, recordSize);
       if (!file.good())
         throw std::runtime_error("error writing replacing meta record\n");
     } else {
       // append
-      file.seekg(0, std::ios::end);
+      file.seekp(0, std::ios::end);
       file.write((char*)&record, recordSize);
       if (!file.good())
         throw std::runtime_error("error appending new record\n");
@@ -89,15 +91,31 @@ class Database {
     file.flush();
     file.close();
   }
+
+  int size() {
+    std::ifstream file(filename, mode);
+    if (!file.good())
+      throw std::runtime_error("error opening the file at size\n");
+    const auto begin = file.tellg();
+    file.seekg(0, std::ios::end);
+    const auto end = file.tellg();
+    const auto fsize = (end - begin);
+    return fsize / recordSize;
+  }
+
   Alumno readRecord(int pos) {
     Record record = {};
-    std::fstream file(filename, mode);
+    std::ifstream file(filename, mode);
+    if (!file.good())
+      throw std::runtime_error("error opening the file at readRecord\n");
+    if (pos > size() || pos < 1)
+      throw std::runtime_error("error pos out of scope\n");
     file.seekg(pos * recordSize);
     // check if erased
     while (file.good()) {
       file.read((char*)&record, recordSize);
       if (!file.good()) throw std::runtime_error("error reading pos record\n");
-      if (record.lastRemoved >= 0) {
+      if (!record.deleted) {
         return record.data;
       }
     }
@@ -130,16 +148,17 @@ std::ostream& operator<<(std::ostream& os, Alumno alum) {
   os << alum.apellidos << ", ";
   os << alum.carrera << ", ";
   os << alum.ciclo << ", ";
-  os << alum.mensualidad << "}\n";
+  os << alum.mensualidad << " }";
   return os;
 }
 
 int p2Test() {
   Database db("/data/testp2");
   Alumno ta = {"2222", "nombre", "apellido", "carrera", 1, 23};
-  std::cout << ta;
+  std::cout << ta << std::endl;
   int errors = 0;
   // add
+  std::cout << "-------------------------------" << std::endl;
   db.add(ta);
   db.add(ta);
   db.add(ta);
@@ -148,6 +167,16 @@ int p2Test() {
   db.add(ta);
   // load
   auto vec = db.load();
-  for (int i = 0; i < vec.size(); i++) std::cout << vec[i];
+  std::cout << "-------------------------------" << std::endl;
+  for (int i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
+  // readpos
+  std::cout << "-------------------------------" << std::endl;
+  std::cout << db.readRecord(4) << std::endl;
+  try {
+    std::cout << db.readRecord(10) << std::endl;
+  } catch (std::runtime_error e) {
+    std::cout << e.what() << std::endl;
+  }
+  std::cout << "-------------------------------" << std::endl;
   return errors;
 }
