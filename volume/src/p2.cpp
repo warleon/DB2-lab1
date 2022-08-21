@@ -123,21 +123,25 @@ class Database {
   }
 
   bool remove(int pos) {
+    if (pos > size() || pos < 1) return false;
     Record record = {};
     Record tmp = {{}, pos, true};
-    std::fstream file(filename, mode);
+    std::fstream file(filename, mode | std::fstream::in | std::fstream::out);
+    if (!file.good())
+      throw std::runtime_error("error opening the file at remove\n");
     // read list head
     file.read((char*)&record, recordSize);
+    if (!file.good()) throw std::runtime_error("error reading dummi record\n");
     // update head
-    file.seekg(0);
+    file.seekp(0, std::ios::beg);
     file.write((char*)&tmp, recordSize);
+    if (!file.good()) throw std::runtime_error("error writing dummi record\n");
     // write past head in the pos record
-    file.seekg(pos * recordSize);
-    if (file.good()) {
-      file.write((char*)&record, recordSize);
-      return true;
-    }
-    return false;
+    file.seekp(pos * recordSize);
+    file.write((char*)&record, recordSize);
+    if (!file.good())
+      throw std::runtime_error("error writing removed head record\n");
+    return true;
   }
 };
 
@@ -178,5 +182,22 @@ int p2Test() {
     std::cout << e.what() << std::endl;
   }
   std::cout << "-------------------------------" << std::endl;
+  // remove
+  if (db.remove(10)) errors++;
+  if (!db.remove(3)) errors++;
+  if (!db.remove(4)) errors++;
+  // load
+  vec = db.load();
+  std::cout << "-------------------------------" << std::endl;
+  for (int i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
+  // readpos
+  std::cout << "-------------------------------" << std::endl;
+  std::cout << db.readRecord(4) << std::endl;
+  // add
+  std::cout << "-------------------------------" << std::endl;
+  db.add(ta);
+  vec = db.load();
+  std::cout << "-------------------------------" << std::endl;
+  for (int i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
   return errors;
 }
