@@ -3,6 +3,6 @@ services:
     build: .
     volumes:
       - ./volume:/lab1
-      - ./data:/data
     working_dir: /lab1
-    command: "make"
+    command: 
+      "make"
