@@ -15,11 +15,27 @@ typedef struct {
   std::string codigo;
   std::string observaciones;
 } Matricula;
+std::ostream& operator<<(std::ostream& os, const Matricula& mat) {
+  os << "{ ";
+  os << mat.ciclo << ", ";
+  os << mat.mensualidad << ", ";
+  os << mat.codigo << ", ";
+  os << mat.observaciones << " }";
+  return os;
+}
 typedef struct {
   int g;
   int size;
   int fieldSize[2];
 } Metadata;
+std::ostream& operator<<(std::ostream& os, const Metadata& mat) {
+  os << "{ ";
+  os << mat.g << ", ";
+  os << mat.size << ", ";
+  os << mat.fieldSize[0] << ", ";
+  os << mat.fieldSize[1] << " }";
+  return os;
+}
 
 class Database {
   static const auto bin = std::fstream::binary;
@@ -113,24 +129,32 @@ class Database {
     if (!file.good())
       throw std::runtime_error("error oppening datafile at add\n");
     file.seekp(0, std::ios::end);
-    std::ofstream metafile(metaname, bin | app);
+    std::ofstream metafile(metaname, bin);
     if (!file.good())
       throw std::runtime_error("error oppening metafile at add\n");
+    metafile.seekp(0, std::ios::end);
     Metadata metaRecord = getSomeMeta(record);
     metaRecord.g = file.tellp();
+    std::cout << metaRecord << std::endl;
     metafile.write((char*)&metaRecord, sizeof(Metadata));
+    metafile.flush();
     if (!file.good())
       throw std::runtime_error("error writing metafile at add\n");
-    metafile.close();
-    auto data = dump(metaRecord, record);
+    char* data = dump(metaRecord, record);
+    // std::cout << std::string(data, data + metaRecord.size) << std::endl;
     file.write(data, metaRecord.size);
+    file.flush();
     if (!file.good())
       throw std::runtime_error("error writing datafile at add\n");
+    metafile.close();
     file.close();
     delete[] data;
   }
 
   Matricula readRecord(int pos) {
+    if (pos > binSize(filetype::meta) / sizeof(Metadata) || pos < 0)
+      throw std::runtime_error("error pos out of scope at readRecord\n");
+
     std::ifstream file(filename, bin);
     if (!file.good())
       throw std::runtime_error("error oppening datafile at readRecord\n");
@@ -151,7 +175,30 @@ class Database {
 
 int tests() {
   int errors = 0;
-  Database db("p4test");
+  Database db("/data/p4test");
+  Matricula ta = {6, 12345, "holaqtalcomoseencuentra",
+                  "muybiengraciasporlapreocupacionyusted?"};
+  // add
+  std::cout << "-------------------------------" << std::endl;
+  db.add(ta);
+  db.add(ta);
+  db.add(ta);
+  db.add(ta);
+  db.add(ta);
+  db.add(ta);
+  // readpos
+  std::cout << "-------------------------------" << std::endl;
+  std::cout << db.readRecord(4) << std::endl;
+  try {
+    std::cout << db.readRecord(10) << std::endl;
+    errors++;
+  } catch (std::runtime_error e) {
+    std::cout << e.what() << std::endl;
+  }
+  // load
+  auto vec = db.load();
+  std::cout << "-------------------------------" << std::endl;
+  for (int i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
   return errors;
 }
 }  // namespace P4
