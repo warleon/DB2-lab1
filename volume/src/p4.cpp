@@ -82,7 +82,7 @@ class Database {
   enum filetype : char { data = 0, meta };
 
   Database(std::string filename_)
-      : filename(filename_), metaname(filename_ + ".meta") {}
+      : filename(filename_), metaname(filename_ + "_meta") {}
 
   int binSize(filetype type) {
     std::ofstream file;
@@ -119,6 +119,7 @@ class Database {
       file.read(data, meta.size);
       mat = parse(meta, data);
       delete[] data;
+      data = nullptr;
       records[pos] = mat;
     }
     return records;
@@ -126,33 +127,32 @@ class Database {
 
   void add(Matricula record) {
     std::ofstream file(filename, bin);
+    file.seekp(0, std::ios::end);
     if (!file.good())
       throw std::runtime_error("error oppening datafile at add\n");
-    file.seekp(0, std::ios::end);
     std::ofstream metafile(metaname, bin);
+    metafile.seekp(0, std::ios::end);
     if (!file.good())
       throw std::runtime_error("error oppening metafile at add\n");
-    metafile.seekp(0, std::ios::end);
     Metadata metaRecord = getSomeMeta(record);
     metaRecord.g = file.tellp();
     std::cout << metaRecord << std::endl;
-    metafile.write((char*)&metaRecord, sizeof(Metadata));
-    metafile.flush();
+    metafile.write((char*)&metaRecord, sizeof(Metadata)).flush();
     if (!file.good())
       throw std::runtime_error("error writing metafile at add\n");
     char* data = dump(metaRecord, record);
-    // std::cout << std::string(data, data + metaRecord.size) << std::endl;
-    file.write(data, metaRecord.size);
-    file.flush();
+    std::cout << std::string(data, data + metaRecord.size) << std::endl;
+    file.write(data, metaRecord.size).flush();
     if (!file.good())
       throw std::runtime_error("error writing datafile at add\n");
     metafile.close();
     file.close();
     delete[] data;
+    data = nullptr;
   }
 
   Matricula readRecord(int pos) {
-    if (pos > binSize(filetype::meta) / sizeof(Metadata) || pos < 0)
+    if (pos > binSize(filetype::meta) / (int)sizeof(Metadata) || pos < 0)
       throw std::runtime_error("error pos out of scope at readRecord\n");
 
     std::ifstream file(filename, bin);
@@ -169,6 +169,7 @@ class Database {
     file.read(data, meta.size);
     Matricula mat = parse(meta, data);
     delete[] data;
+    data = nullptr;
     return mat;
   }
 };
@@ -192,13 +193,13 @@ int tests() {
   try {
     std::cout << db.readRecord(10) << std::endl;
     errors++;
-  } catch (std::runtime_error e) {
+  } catch (std::runtime_error& e) {
     std::cout << e.what() << std::endl;
   }
   // load
   auto vec = db.load();
   std::cout << "-------------------------------" << std::endl;
-  for (int i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
+  for (size_t i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
   return errors;
 }
 }  // namespace P4
