@@ -126,23 +126,23 @@ class Database {
   }
 
   void add(Matricula record) {
-    std::ofstream file(filename, bin);
-    file.seekp(0, std::ios::end);
+    std::ofstream file(filename, bin | std::ios::app| std::ios::ate);
+    //file.seekp(0, std::ios::end);
     if (!file.good())
       throw std::runtime_error("error oppening datafile at add\n");
-    std::ofstream metafile(metaname, bin);
-    metafile.seekp(0, std::ios::end);
-    if (!file.good())
+    std::ofstream metafile(metaname, bin | std::ios::app| std::ios::ate);
+    //metafile.seekp(0, std::ios::end);
+    if (!metafile.good())
       throw std::runtime_error("error oppening metafile at add\n");
     Metadata metaRecord = getSomeMeta(record);
     metaRecord.g = file.tellp();
     std::cout << metaRecord << std::endl;
-    metafile.write((char*)&metaRecord, sizeof(Metadata)).flush();
-    if (!file.good())
+    metafile.write((char*)&metaRecord, sizeof(Metadata));
+    if (!metafile.good())
       throw std::runtime_error("error writing metafile at add\n");
     char* data = dump(metaRecord, record);
     std::cout << std::string(data, data + metaRecord.size) << std::endl;
-    file.write(data, metaRecord.size).flush();
+    file.write(data, metaRecord.size);
     if (!file.good())
       throw std::runtime_error("error writing datafile at add\n");
     metafile.close();
