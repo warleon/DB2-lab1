@@ -4,6 +4,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace P4 {
@@ -29,7 +30,18 @@ class Database {
   std::string filename;
   std::string metaname;
 
-  Matricula parse(Metadata met, char* data) {}
+  Matricula parse(Metadata met, char* data) {
+    Matricula mat;
+    memcpy((char*)&mat, data, sizeof(int) + sizeof(float));
+    mat.codigo = std::move(
+        std::string(data + offsetof(Matricula, codigo),
+                    data + offsetof(Matricula, codigo) + met.fieldSize[0]));
+    mat.codigo = std::move(
+        std::string(data + offsetof(Matricula, codigo) + met.fieldSize[0],
+                    data + offsetof(Matricula, codigo) + met.fieldSize[0] +
+                        met.fieldSize[1]));
+    return mat;
+  }
   char* dump(Metadata met, Matricula data) {
     char* buff = new char[met.size];
     memcpy(buff, &data.ciclo, sizeof(int));
@@ -51,33 +63,95 @@ class Database {
   }
 
  public:
+  enum filetype : char { data = 0, meta };
+
   Database(std::string filename_)
       : filename(filename_), metaname(filename_ + ".meta") {}
-  std::vector<Matricula> load() {
-    std::fstream file(filename, bin | in);
-    std::fstream metafile(metaname, bin | in);
-  }
-  void add(Matricula record) {
-    std::fstream file(filename, bin | out);
+
+  int binSize(filetype type) {
+    std::ofstream file;
+    switch (type) {
+      case filetype::data:
+        file.open(filename, bin);
+        break;
+      case filetype::meta:
+        file.open(metaname, bin);
+        break;
+      default:
+        break;
+    }
+    if (!file.good()) throw std::runtime_error("error oppening file at size\n");
     file.seekp(0, std::ios::end);
-    std::fstream metafile(metaname, bin | out | app);
+    return file.tellp();
+  }
+
+  std::vector<Matricula> load() {
+    std::ifstream file(filename, bin);
+    if (!file.good())
+      throw std::runtime_error("error oppening datafile at load\n");
+    std::ifstream metafile(metaname, bin);
+    if (!file.good())
+      throw std::runtime_error("error oppening metafile at load\n");
+    int n = binSize(filetype::meta) / sizeof(Metadata);
+    std::vector<Matricula> records(n);
+    Metadata meta = {};
+    Matricula mat = {};
+    for (int pos = 0; pos < n; pos++) {
+      metafile.seekg(pos * sizeof(Metadata));
+      metafile.read((char*)&meta, sizeof(Metadata));
+      char* data = new char[meta.size];
+      file.read(data, meta.size);
+      mat = parse(meta, data);
+      delete[] data;
+      records[pos] = mat;
+    }
+    return records;
+  }
+
+  void add(Matricula record) {
+    std::ofstream file(filename, bin);
+    if (!file.good())
+      throw std::runtime_error("error oppening datafile at add\n");
+    file.seekp(0, std::ios::end);
+    std::ofstream metafile(metaname, bin | app);
+    if (!file.good())
+      throw std::runtime_error("error oppening metafile at add\n");
     Metadata metaRecord = getSomeMeta(record);
     metaRecord.g = file.tellp();
     metafile.write((char*)&metaRecord, sizeof(Metadata));
+    if (!file.good())
+      throw std::runtime_error("error writing metafile at add\n");
     metafile.close();
     auto data = dump(metaRecord, record);
     file.write(data, metaRecord.size);
+    if (!file.good())
+      throw std::runtime_error("error writing datafile at add\n");
     file.close();
     delete[] data;
   }
+
   Matricula readRecord(int pos) {
-    std::fstream file(filename, bin | in);
-    std::fstream metafile(metaname, bin | in);
+    std::ifstream file(filename, bin);
+    if (!file.good())
+      throw std::runtime_error("error oppening datafile at readRecord\n");
+    std::ifstream metafile(metaname, bin);
+    if (!file.good())
+      throw std::runtime_error("error oppening metafile at readRecord\n");
+
+    metafile.seekg(pos * sizeof(Metadata));
+    Metadata meta = {};
+    metafile.read((char*)&meta, sizeof(Metadata));
+    char* data = new char[meta.size];
+    file.read(data, meta.size);
+    Matricula mat = parse(meta, data);
+    delete[] data;
+    return mat;
   }
 };
 
 int tests() {
   int errors = 0;
+  Database db("p4test");
   return errors;
 }
 }  // namespace P4
