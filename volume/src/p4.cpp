@@ -106,7 +106,7 @@ class Database {
     if (!file.good())
       throw std::runtime_error("error oppening datafile at load\n");
     std::ifstream metafile(metaname, bin);
-    if (!file.good())
+    if (!metafile.good())
       throw std::runtime_error("error oppening metafile at load\n");
     int n = binSize(filetype::meta) / sizeof(Metadata);
     std::vector<Matricula> records(n);
@@ -126,16 +126,16 @@ class Database {
   }
 
   void add(Matricula record) {
-    std::ofstream file(filename, bin | std::ios::app| std::ios::ate);
-    //file.seekp(0, std::ios::end);
+    std::ofstream file(filename, bin | std::ios::app | std::ios::ate);
+    // file.seekp(0, std::ios::end);
     if (!file.good())
       throw std::runtime_error("error oppening datafile at add\n");
-    std::ofstream metafile(metaname, bin | std::ios::app| std::ios::ate);
-    //metafile.seekp(0, std::ios::end);
+    std::ofstream metafile(metaname, bin | std::ios::app | std::ios::ate);
+    // metafile.seekp(0, std::ios::end);
     if (!metafile.good())
       throw std::runtime_error("error oppening metafile at add\n");
     Metadata metaRecord = getSomeMeta(record);
-    metaRecord.g = file.tellp();
+    metaRecord.g = (int)file.tellp();
     std::cout << metaRecord << std::endl;
     metafile.write((char*)&metaRecord, sizeof(Metadata));
     if (!metafile.good())
@@ -159,14 +159,18 @@ class Database {
     if (!file.good())
       throw std::runtime_error("error oppening datafile at readRecord\n");
     std::ifstream metafile(metaname, bin);
-    if (!file.good())
+    if (!metafile.good())
       throw std::runtime_error("error oppening metafile at readRecord\n");
 
     metafile.seekg(pos * sizeof(Metadata));
     Metadata meta = {};
     metafile.read((char*)&meta, sizeof(Metadata));
+    if (!metafile.good())
+      throw std::runtime_error("error reading metafile at readRecord\n");
     char* data = new char[meta.size];
     file.read(data, meta.size);
+    if (!file.good())
+      throw std::runtime_error("error reading datafile at readRecord\n");
     Matricula mat = parse(meta, data);
     delete[] data;
     data = nullptr;
@@ -176,7 +180,7 @@ class Database {
 
 int tests() {
   int errors = 0;
-  Database db("/data/p4test");
+  Database db("p4test");
   Matricula ta = {6, 12345, "holaqtalcomoseencuentra",
                   "muybiengraciasporlapreocupacionyusted?"};
   // add
