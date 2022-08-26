@@ -1,4 +1,3 @@
-#include <climits>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -7,24 +6,14 @@
 
 using namespace std;
 
-namespace P3 {
-
 struct Alumno {
   string Nombre;
   string Apellidos;
   string Carrera;
   float mensualidad;
-
-  void print() {
-    cout << Nombre << endl
-         << Apellidos << endl
-         << Carrera << endl
-         << mensualidad << endl;
-  }
 };
 
 ostream &operator<<(ostream &stream, Alumno &p) {
-  cout << "Begin \n";
   stream << p.Nombre << '|';
   stream << p.Apellidos << '|';
   stream << p.Carrera << '|';
@@ -39,19 +28,17 @@ class VariableRecord {
   string filename;
 
  public:
-  VariableRecord(string filename) { this->filename = filename; }
+  VariableRecord(string filename) 
+  { this->filename = filename; }
 
   vector<Alumno> load() {
     ifstream File(this->filename, ios::in);
     vector<Alumno> alumnos;
     if (!File.is_open()) cout << "No se pudo abrir el archivo. \n";
-
-    string line;
-
-    getline(File, line);
-
-    while (getline(File, line)) {
-      char *data = const_cast<char *>(line.c_str());
+    string l;
+    getline(File,l);
+    while (getline(File, l)) {
+      char *data = const_cast<char *>(l.c_str());
       data = strtok(data, "|");
       Alumno record;
 
@@ -103,13 +90,15 @@ class VariableRecord {
   }
 };
 
-int tests() {
-  int errors = 0;
+int main() {
   VariableRecord file("datos3.txt");
-  Alumno alumno1;
-  alumno1 = file.readRecord(1);
-  alumno1.print();
-  return errors;
+  Alumno alumno1={"x","y","a",0};
+  Alumno alumno2={"x1","y1","a1",1};
+  file.add(alumno1);
+  file.add(alumno2);
+  Alumno x = file.readRecord(1);
+  for(auto i:file.load()){
+    cout<<i.Nombre<<" "<<i.Apellidos<<" "<<i.Carrera<<" "<<i.mensualidad<<endl;
+  }
+  return 0;
 }
-
-}  // namespace P3
