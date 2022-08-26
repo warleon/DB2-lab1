@@ -88,16 +88,15 @@ class Database {
     std::ofstream file;
     switch (type) {
       case filetype::data:
-        file.open(filename, bin);
+        file.open(filename, bin | std::ios::app | std::ios::ate);
         break;
       case filetype::meta:
-        file.open(metaname, bin);
+        file.open(metaname, bin | std::ios::app | std::ios::ate);
         break;
       default:
         break;
     }
     if (!file.good()) throw std::runtime_error("error oppening file at size\n");
-    file.seekp(0, std::ios::end);
     return file.tellp();
   }
 
@@ -127,16 +126,14 @@ class Database {
 
   void add(Matricula record) {
     std::ofstream file(filename, bin | std::ios::app | std::ios::ate);
-    // file.seekp(0, std::ios::end);
     if (!file.good())
       throw std::runtime_error("error oppening datafile at add\n");
     std::ofstream metafile(metaname, bin | std::ios::app | std::ios::ate);
-    // metafile.seekp(0, std::ios::end);
     if (!metafile.good())
       throw std::runtime_error("error oppening metafile at add\n");
     Metadata metaRecord = getSomeMeta(record);
     metaRecord.g = (int)file.tellp();
-    std::cout << metaRecord << std::endl;
+    std::cout << metaRecord << " " << metafile.tellp() << std::endl;
     metafile.write((char*)&metaRecord, sizeof(Metadata));
     if (!metafile.good())
       throw std::runtime_error("error writing metafile at add\n");
