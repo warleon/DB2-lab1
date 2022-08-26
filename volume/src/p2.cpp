@@ -174,13 +174,13 @@ int tests() {
   // load
   auto vec = db.load();
   std::cout << "-------------------------------" << std::endl;
-  for (int i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
+  for (size_t i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
   // readpos
   std::cout << "-------------------------------" << std::endl;
   std::cout << db.readRecord(4) << std::endl;
   try {
     std::cout << db.readRecord(10) << std::endl;
-  } catch (std::runtime_error e) {
+  } catch (std::runtime_error& e) {
     std::cout << e.what() << std::endl;
   }
   std::cout << "-------------------------------" << std::endl;
@@ -191,7 +191,7 @@ int tests() {
   // load
   vec = db.load();
   std::cout << "-------------------------------" << std::endl;
-  for (int i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
+  for (size_t i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
   // readpos
   std::cout << "-------------------------------" << std::endl;
   std::cout << db.readRecord(4) << std::endl;
@@ -200,7 +200,7 @@ int tests() {
   db.add(ta);
   vec = db.load();
   std::cout << "-------------------------------" << std::endl;
-  for (int i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
+  for (size_t i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
   return errors;
 }
 }  // namespace P2

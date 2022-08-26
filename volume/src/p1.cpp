@@ -6,6 +6,8 @@
 
 using namespace std;
 
+namespace P1 {
+
 struct Alumno {
   char codigo[5];
   char nombre[11];
@@ -75,7 +77,7 @@ void readFromConsole(char buffer[], int size) {
   cin.clear();
 }
 
-int main() {
+int tests() {
   cout << "Antes del nuevo alumno" << endl;
   FixedRecord f("/data/datos12.txt");
   vector<Alumno> vec = f.load();
@@ -109,3 +111,5 @@ int main() {
        << endl;
   return 0;
 }
+
+}  // namespace P1
