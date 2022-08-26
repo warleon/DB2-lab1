@@ -50,11 +50,11 @@ class Database {
     Matricula mat;
     memcpy((char*)&mat, data, sizeof(int) + sizeof(float));
     mat.codigo = std::move(
-        std::string(data + offsetof(Matricula, codigo),
-                    data + offsetof(Matricula, codigo) + met.fieldSize[0]));
-    mat.codigo = std::move(
-        std::string(data + offsetof(Matricula, codigo) + met.fieldSize[0],
-                    data + offsetof(Matricula, codigo) + met.fieldSize[0] +
+        std::string(data + sizeof(int) + sizeof(float),
+                    data + sizeof(int) + sizeof(float) + met.fieldSize[0]));
+    mat.observaciones = std::move(
+        std::string(data + sizeof(int) + sizeof(float) + met.fieldSize[0],
+                    data + sizeof(int) + sizeof(float) + met.fieldSize[0] +
                         met.fieldSize[1]));
     return mat;
   }
@@ -86,18 +86,21 @@ class Database {
 
   int binSize(filetype type) {
     std::ofstream file;
+    auto flags = bin | std::ios::app | std::ios::ate;
     switch (type) {
       case filetype::data:
-        file.open(filename, bin | std::ios::app | std::ios::ate);
+        file.open(filename, flags);
         break;
       case filetype::meta:
-        file.open(metaname, bin | std::ios::app | std::ios::ate);
+        file.open(metaname, flags);
         break;
       default:
-        break;
+        return 0;
     }
     if (!file.good()) throw std::runtime_error("error oppening file at size\n");
-    return file.tellp();
+    auto val = file.tellp();
+    file.close();
+    return val;
   }
 
   std::vector<Matricula> load() {
@@ -133,12 +136,10 @@ class Database {
       throw std::runtime_error("error oppening metafile at add\n");
     Metadata metaRecord = getSomeMeta(record);
     metaRecord.g = (int)file.tellp();
-    std::cout << metaRecord << " " << metafile.tellp() << std::endl;
     metafile.write((char*)&metaRecord, sizeof(Metadata));
     if (!metafile.good())
       throw std::runtime_error("error writing metafile at add\n");
     char* data = dump(metaRecord, record);
-    std::cout << std::string(data, data + metaRecord.size) << std::endl;
     file.write(data, metaRecord.size);
     if (!file.good())
       throw std::runtime_error("error writing datafile at add\n");
