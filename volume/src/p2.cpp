@@ -6,8 +6,6 @@
 #include <string>
 #include <vector>
 
-namespace P2 {
-
 typedef struct {
   char codigo[5];
   char nombre[11];
@@ -158,8 +156,8 @@ std::ostream& operator<<(std::ostream& os, Alumno alum) {
   return os;
 }
 
-int tests() {
-  Database db("/data/testp2");
+void tests() {
+  Database db("testp2");
   Alumno ta = {"2222", "nombre", "apellido", "carrera", 1, 23};
   std::cout << ta << std::endl;
   int errors = 0;
@@ -201,6 +199,8 @@ int tests() {
   vec = db.load();
   std::cout << "-------------------------------" << std::endl;
   for (size_t i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
-  return errors;
 }
-}  // namespace P2
+
+int main(){
+  tests();
+}
