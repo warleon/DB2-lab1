@@ -7,7 +7,6 @@
 #include <utility>
 #include <vector>
 
-namespace P4 {
 
 typedef struct {
   int ciclo;
@@ -176,7 +175,7 @@ class Database {
   }
 };
 
-int tests() {
+void tests() {
   int errors = 0;
   Database db("p4test");
   Matricula ta = {6, 12345, "holaqtalcomoseencuentra",
@@ -202,6 +201,8 @@ int tests() {
   auto vec = db.load();
   std::cout << "-------------------------------" << std::endl;
   for (size_t i = 0; i < vec.size(); i++) std::cout << vec[i] << std::endl;
-  return errors;
 }
-}  // namespace P4
+
+int main(){
+  tests();
+}
