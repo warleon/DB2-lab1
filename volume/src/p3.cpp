@@ -90,7 +90,7 @@ class VariableRecord {
   }
 };
 
-int main() {
+void tests(){
   VariableRecord file("datos3.txt");
   Alumno alumno1={"x","y","a",0};
   Alumno alumno2={"x1","y1","a1",1};
@@ -100,5 +100,9 @@ int main() {
   for(auto i:file.load()){
     cout<<i.Nombre<<" "<<i.Apellidos<<" "<<i.Carrera<<" "<<i.mensualidad<<endl;
   }
-  return 0;
+}
+
+
+int main() {
+   tests();
 }
